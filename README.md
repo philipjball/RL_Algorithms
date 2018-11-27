@@ -1,16 +1,29 @@
-# Flappy Bird DQN
+# Reinforcement Learning Algorithms in PyTorch
 
-This repo implements DQN (from scratch) and learns to play Flappy Bird, specifically the PyGame/PLE implementation
-
-![example](./docs/final_model.gif)
+Inspired by [Spinning Up](https://spinningup.openai.com/en/latest/), we will implement various salient reinforcement learning (RL) 
+ algorithms in PyTorch.
+ 
+| ![example](./docs/final_model.gif) |
+| :---: |
+| *DQN Playing Flappy Bird* |
 
 In its current version, I get the following performance averaged over 20 episodes:
 
-| Algorithm | Performance |
-| :----:       | :----:         |
-| DQN Vanilla  | 119.1   |
+| Algorithm | Game |Performance |
+| :----:       | :---: |:----:         |
+| DQN Vanilla  | FlapPy Bird| 119.1   |
 
-NB: The default arguments are the hyperparameters used.
+## Algorithms Implmented
+- [x] [Vanilla DQN](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
+- [ ] [DRQN](https://arxiv.org/pdf/1507.06527)
+- [ ] [Mini-Rainbow DQN](https://arxiv.org/pdf/1507.06527)
+  -[ ] [Dueling DQN]()
+  -[ ] [Prioritized Replay Experience]()
+  -[ ] [Double Q-Learning]()
+- [ ] [Vanilla Policy Gradient](http://rll.berkeley.edu/deeprlcoursesp17/docs/lec2.pdf)
+- [ ] [A2C](https://arxiv.org/pdf/1602.01783.pdf)
+- [ ] [PPO](https://arxiv.org/pdf/1707.06347.pdf)
+- [ ] [DDPG](https://arxiv.org/pdf/1509.02971.pdf)
 
 ## Requirements
 
@@ -52,13 +65,8 @@ python runFlappy.py
 --num_samples_pre 3000                      # how many samples under a random policy to initially load into the replay memory
 ```
 
-
 ## TODO:
-* Implement some of [Rainbow](https://arxiv.org/pdf/1710.02298.pdf) (see [Spinning Up](https://spinningup.openai.com/en/latest/spinningup/keypapers.html#model-free-rl))
-    * Dueling DQN
-    * Prioritized Replay Experience
-    * Double Q
-* Fork and add more
+* Add more
     * Games (Pong, OpenAI Gym)
         * Make the model [OpenAI Gym friendly](https://github.com/lusob/gym-ple)?
     * [Algorithms](https://spinningup.openai.com/en/latest/spinningup/spinningup.html#learn-by-doing)
