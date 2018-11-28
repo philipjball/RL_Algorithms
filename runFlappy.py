@@ -1,21 +1,39 @@
-from ple.games.flappybird import FlappyBird
-from ple import PLE
+import gym
+from gym.wrappers import Monitor
+import gym_ple
 from DQNAgent import *
 import argparse
 import os
 
 
-def setup_env_agent(display_screen, frame_skip, force_fps, reward_shaping, frame_stack, train):
-    game = FlappyBird()
-    ple_flappy = PLE(game, fps=30, display_screen=display_screen, frame_skip=frame_skip, force_fps=force_fps)
-    if reward_shaping and train:
-        z = ple_flappy.game.rewards
-        z['tick'] = 0.1
-        ple_flappy.game.adjustRewards(z)
-    ple_flappy.init()
-    agent = DQNAgent(ple_flappy.getActionSet(), frame_stack=frame_stack)
+class FlappyRewardWrapper(gym.RewardWrapper):
 
-    return ple_flappy, agent
+    def __init__(self, env, living=False):
+        super(FlappyRewardWrapper, self).__init__(env)
+        self.living = living
+
+    def reward(self, reward):
+        if self.living:
+            reward += 0.1
+        reward = np.clip(reward, -1, 1)
+        return reward
+
+
+def setup_env_agent(monitor, reward_shaping, frame_stack, train):
+
+    env = gym.make('FlappyBird-v0')
+    if monitor:
+        if not os.path.exists('./models'):
+            os.makedirs('./monitor_dir')
+        env = Monitor(env, './monitor_dir/', force=True)
+    if reward_shaping and train:    # only shape reward when training and when stipulated
+        reward_shaping = True
+    else:
+        reward_shaping = False
+    env = FlappyRewardWrapper(env, reward_shaping)
+    env.seed(0)
+    agent = DQNAgent(env.action_space, frame_stack=frame_stack)
+    return env, agent
 
 
 def check_train_test(value):
@@ -28,22 +46,14 @@ def check_train_test(value):
 def main(args):
 
     if args.mode == 'train':
-        os.putenv('SDL_VIDEODRIVER', 'fbcon')
-        os.environ["SDL_VIDEODRIVER"] = "dummy"
-        display_screen = False
-        force_fps = True
-        env, flappy_agent = setup_env_agent(display_screen=display_screen, frame_skip=args.frame_skip,
-                                            force_fps=force_fps, reward_shaping=args.reward_shaping,
+        env, flappy_agent = setup_env_agent(monitor=args.monitor, reward_shaping=args.reward_shaping,
                                             frame_stack=args.frame_stack, train=True)
         flappy_runner = Trainer(env, flappy_agent, ReplayMemory, batch_size=args.batch_size,
                                 memory_size=args.memory_size, final_exp_frame=args.final_exp_frame,
                                 save_freq=args.save_freq, reset_target=args.reset_target,
                                 max_ep_steps=args.max_ep_steps, gamma=args.gamma)
     else:
-        display_screen = True
-        force_fps = not args.slow
-        env, flappy_agent = setup_env_agent(display_screen=display_screen, frame_skip=args.frame_skip,
-                                            force_fps=force_fps, reward_shaping=args.reward_shaping,
+        env, flappy_agent = setup_env_agent(monitor=args.monitor, reward_shaping=False,
                                             frame_stack=args.frame_stack, train=False)
         flappy_agent.eps = 0.0
         flappy_runner = Tester(env, flappy_agent, 84)
@@ -59,6 +69,8 @@ if __name__ == '__main__':
                         help='set to train or test')
     parser.add_argument('--testfile', type=str, nargs=1, default='./models/trained_params.pth',
                         help='path of the trained model')
+    parser.add_argument('--monitor', type=bool, nargs=1, default=True,
+                        help='monitor the training/testing')
     parser.add_argument('--frame_skip', type=int, nargs=1, default=3,
                         help='how many frames to skip between actions (and apply the same action)')
     parser.add_argument('--reward_shaping', type=bool, nargs=1, default=True,
@@ -83,8 +95,6 @@ if __name__ == '__main__':
                         help='how many episodes to run')
     parser.add_argument('--num_samples_pre', type=int, nargs=1, default=3000,
                         help='num of samples with a random policy to seed the replay memory buffer')
-    parser.add_argument('--slow', type=bool, nargs=1, default=False,
-                        help='run the game in the native FPS (not as fast as possible)')
     arguments = parser.parse_args()
 
     main(arguments)

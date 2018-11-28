@@ -1,8 +1,8 @@
 # Reinforcement Learning Algorithms in PyTorch
 
 Inspired by [Spinning Up](https://spinningup.openai.com/en/latest/), we will implement various salient reinforcement learning (RL) 
- algorithms in PyTorch.
- 
+ algorithms in PyTorch. This is a "fork" of my original [Deep FlappyBird repo](https://github.com/fiorenza2/dqnflappy).
+
 | ![example](./docs/final_model.gif) |
 | :---: |
 | *DQN Playing Flappy Bird* |
@@ -15,11 +15,11 @@ In its current version, I get the following performance averaged over 20 episode
 
 ## Algorithms Implmented
 - [x] [Vanilla DQN](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
-- [ ] [DRQN](https://arxiv.org/pdf/1507.06527)
 - [ ] [Mini-Rainbow DQN](https://arxiv.org/pdf/1507.06527)
-  - [ ] [Dueling DQN]()
-  - [ ] [Prioritized Replay Experience]()
-  - [ ] [Double Q-Learning]()
+  - [ ] [Dueling DQN](https://arxiv.org/pdf/1511.06581.pdf)
+  - [ ] [Prioritized Replay Experience](https://arxiv.org/pdf/1511.05952.pdf)
+  - [ ] [Double Q-Learning](https://arxiv.org/pdf/1509.06461.pdf)
+- [ ] [DRQN](https://arxiv.org/pdf/1507.06527)
 - [ ] [Vanilla Policy Gradient](http://rll.berkeley.edu/deeprlcoursesp17/docs/lec2.pdf)
 - [ ] [A2C](https://arxiv.org/pdf/1602.01783.pdf)
 - [ ] [PPO](https://arxiv.org/pdf/1707.06347.pdf)
@@ -66,9 +66,12 @@ python runFlappy.py
 ```
 
 ## TODO:
+* Make the model [OpenAI Gym friendly](https://github.com/lusob/gym-ple)
+    * Manual Frame-Skipping in the runners
+    * Check rewards
+    * Convert RGB to GrayScale in the preprocessors
 * Add more
     * Games (Pong, OpenAI Gym)
-        * Make the model [OpenAI Gym friendly](https://github.com/lusob/gym-ple)?
     * [Algorithms](https://spinningup.openai.com/en/latest/spinningup/spinningup.html#learn-by-doing)
     
 

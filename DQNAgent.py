@@ -190,7 +190,6 @@ class Trainer(Runner):
                 psi_state_tensor = torch.tensor(psi_state, dtype=torch.float, device=device).unsqueeze(0) / 255
                 action = self.agent.get_action(psi_state_tensor)
             reward = self.env.act(action)
-            reward = np.clip(reward, -1.0, 1.0)
             rewards.append(reward)
             state = self.preprocess_image(self.env.getScreenGrayscale())
             self.frame_stacker.append(state)
@@ -273,7 +272,6 @@ class Tester(Runner):
                 psi_state_tensor = torch.tensor(psi_state, dtype=torch.float, device=device).unsqueeze(0) / 255
                 action = self.agent.get_action(psi_state_tensor)
             reward = self.env.act(action)
-            reward = np.clip(reward, -1.0, 1.0)
             rewards.append(reward)
             state = self.preprocess_image(self.env.getScreenGrayscale())
             self.frame_stacker.append(state)
