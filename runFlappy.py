@@ -51,49 +51,51 @@ def main(args):
         flappy_runner = Trainer(env, flappy_agent, ReplayMemory, batch_size=args.batch_size,
                                 memory_size=args.memory_size, final_exp_frame=args.final_exp_frame,
                                 save_freq=args.save_freq, reset_target=args.reset_target,
-                                max_ep_steps=args.max_ep_steps, gamma=args.gamma)
+                                max_ep_steps=args.max_ep_steps, gamma=args.gamma,
+                                num_samples_pre=args.num_samples_pre, frame_skip=args.frame_skip)
     else:
         env, flappy_agent = setup_env_agent(monitor=args.monitor, reward_shaping=False,
                                             frame_stack=args.frame_stack, train=False)
         flappy_agent.eps = 0.0
-        flappy_runner = Tester(env, flappy_agent, 84)
+        flappy_runner = Tester(env, flappy_agent, 84, frame_skip=args.frame_skip)
         flappy_runner.load_model(args.testfile)
 
+    print(args.num_episodes)
     flappy_runner.run_experiment(args.num_episodes)
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Run DQN on Flappy Bird, training/testing.')
-    parser.add_argument('--mode', type=check_train_test, nargs=1, default='test',
+    parser.add_argument('--mode', type=check_train_test, default='train',
                         help='set to train or test')
-    parser.add_argument('--testfile', type=str, nargs=1, default='./models/trained_params.pth',
+    parser.add_argument('--testfile', type=str, default='./models/trained_params.pth',
                         help='path of the trained model')
-    parser.add_argument('--monitor', type=bool, nargs=1, default=True,
+    parser.add_argument('--monitor', type=bool, default=False,
                         help='monitor the training/testing')
-    parser.add_argument('--frame_skip', type=int, nargs=1, default=3,
+    parser.add_argument('--frame_skip', type=int, default=3,
                         help='how many frames to skip between actions (and apply the same action)')
-    parser.add_argument('--reward_shaping', type=bool, nargs=1, default=True,
+    parser.add_argument('--reward_shaping', type=bool, default=True,
                         help='incorporate a reward for living')
-    parser.add_argument('--frame_stack', type=int, nargs=1, default=4,
+    parser.add_argument('--frame_stack', type=int, default=4,
                         help='how many frames to stack together as input to DQN')
-    parser.add_argument('--gamma', type=float, nargs=1, default=0.9,
+    parser.add_argument('--gamma', type=float, default=0.9,
                         help='future return discounting parameter')
-    parser.add_argument('--batch_size', type=int, nargs=1, default=32,
+    parser.add_argument('--batch_size', type=int, default=32,
                         help='batch size from replay memory buffer')
-    parser.add_argument('--memory_size', type=int, nargs=1, default=100000,
+    parser.add_argument('--memory_size', type=int, default=100000,
                         help='size of replay memory buffer')
-    parser.add_argument('--max_ep_steps', type=int, nargs=1, default=1000000,
+    parser.add_argument('--max_ep_steps', type=int, default=1000000,
                         help='max number of steps per episode')
-    parser.add_argument('--reset_target', type=int, nargs=1, default=10000,
+    parser.add_argument('--reset_target', type=int, default=10000,
                         help='steps before syncing the target network with the current DQN')
-    parser.add_argument('--final_exp_frame', type=int, nargs=1, default=500000,
+    parser.add_argument('--final_exp_frame', type=int, default=500000,
                         help='frame at which exploration hits the baseline (i.e., 0.01)')
-    parser.add_argument('--save_freq', type=int, nargs=1, default=10000,
+    parser.add_argument('--save_freq', type=int, default=10000,
                         help='how often to save the models')
-    parser.add_argument('--num_episodes', type=int, nargs=1, default=100000000,
+    parser.add_argument('--num_episodes', type=int, default=100000000,
                         help='how many episodes to run')
-    parser.add_argument('--num_samples_pre', type=int, nargs=1, default=3000,
+    parser.add_argument('--num_samples_pre', type=int, default=3000,
                         help='num of samples with a random policy to seed the replay memory buffer')
     arguments = parser.parse_args()
 

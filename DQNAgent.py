@@ -41,7 +41,7 @@ class DQN(nn.Module):
 
     def __init__(self, action_set, frame_stack=4, input_height=84, input_width=84):
         super(DQN, self).__init__()
-        num_actions = len(action_set)
+        num_actions = action_set.n
         self.conv1 = nn.Conv2d(frame_stack, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
@@ -88,15 +88,14 @@ class DQNAgent(object):
         self.q_target.load_state_dict(self.q_network.state_dict())
 
     def random_action(self):
-        return np.random.choice(self.action_set)
+        return self.action_set.sample()
 
     def get_action(self, in_frame):
         # eps-greedy exploration
         if np.random.rand() < self.eps:     # if rand number is greater than eps, then explore
             return self.random_action()
         else:
-            argmax = torch.argmax(self.q_network(in_frame))
-            return self.action_set[argmax]
+            return int(torch.argmax(self.q_network(in_frame)))
 
 
 class DQNLoss(nn.Module):
@@ -111,7 +110,7 @@ class DQNLoss(nn.Module):
 
     def forward(self, transition_in):
         states = torch.tensor(np.stack(transition_in.state), dtype=torch.float, device=device) / 255
-        actions_index = torch.tensor([self.action_set.index(action) for action in transition_in.action], dtype=torch.long, device=device)
+        actions_index = torch.tensor(transition_in.action, dtype=torch.long, device=device)
         next_states = torch.tensor(np.stack(transition_in.next_state), dtype=torch.float, device=device) / 255
         rewards = torch.tensor(transition_in.reward, dtype=torch.float, device=device)
         done = torch.tensor(transition_in.done, dtype=torch.float, device=device)
@@ -123,24 +122,25 @@ class DQNLoss(nn.Module):
 
 class Runner(object):
     """Runs the experiments (training and testing inherit from this)"""
-    def __init__(self, env, agent, downscale=84, max_ep_steps=1000000):
+    def __init__(self, env, agent, downscale=84, max_ep_steps=1000000, frame_skip=3):
         self.env = env
         self.agent = agent
-        self.transformer = transforms.Compose([transforms.Resize([downscale,downscale])])
+        self.transformer = transforms.Compose([transforms.Grayscale(), transforms.Resize([downscale,downscale])])
         self.total_steps = 0
         self.max_ep_steps = max_ep_steps
         frame_stack = self.agent.frame_stack
         self.frame_stacker = deque(maxlen=frame_stack)
+        self.frame_skip = frame_skip
 
     def preprocess_image(self, input_image):
         """Does a few things:
-        1. Reshape image to 84x84
-        2. Permute images to the PyTorch ordering (CxHxW)
-        3. Convert to PyTorch Tensor
+        1. Convert to GrayScale
+        2. Reshape image to 84x84
+        3. Convert to a uint8 numpy array
         """
         input_image = Image.fromarray(input_image)
         input_image = self.transformer(input_image)
-        input_image = np.array(input_image, dtype=np.uint8).T
+        input_image = np.array(input_image, dtype=np.uint8)
         return input_image
 
     def episode(self):
@@ -157,10 +157,10 @@ class Runner(object):
 
 
 class Trainer(Runner):
-    def __init__(self, env, agent, memory_func, batch_size=32, downscale=84, num_samples_pre=30000,
+    def __init__(self, env, agent, memory_func, batch_size=32, downscale=84, frame_skip=3, num_samples_pre=30000,
                  memory_size=50000, max_ep_steps=1000000, reset_target=10000, final_exp_frame=100000, gamma=0.9,
                  optimizer=optim.Adam, save_freq=100000):
-        super(Trainer, self).__init__(env, agent, downscale, max_ep_steps)
+        super(Trainer, self).__init__(env, agent, downscale, max_ep_steps, frame_skip)
         self.memory = memory_func(memory_size)
         self.optimizer = optimizer(self.agent.q_network.parameters(), lr=1e-4)
         self.batch_size = batch_size
@@ -174,36 +174,37 @@ class Trainer(Runner):
 
     def episode(self):
         steps = 0
+        done = False
         # Do resets
-        self.env.reset_game()
+        state = self.preprocess_image(self.env.reset())
         self.frame_stacker.clear()
         rewards = []
+        self.frame_stacker.append(state)                        # Append the first state into the stacker
         # Start training episode
-        state = self.preprocess_image(self.env.getScreenGrayscale())
-        self.frame_stacker.append(state)
-        while self.env.game_over() is False and steps < self.max_ep_steps:
-            # Need to fill frame stacker
-            if steps < self.agent.frame_stack:
-                action = None
+        while done is False and steps < self.max_ep_steps:
+            if steps < self.agent.frame_stack:                  # Need to fill frame stacker
+                action = 0
             else:
                 psi_state = self.get_recent_states()
                 psi_state_tensor = torch.tensor(psi_state, dtype=torch.float, device=device).unsqueeze(0) / 255
                 action = self.agent.get_action(psi_state_tensor)
-            reward = self.env.act(action)
+            reward = 0  # zero the reward for frame skipping
+            for i in range(self.frame_skip):
+                obs, r, done, _ = self.env.step(action)     # NB: Even if the environment is 'done', it will still accept actions and continue returning 'done'
+                reward += r
             rewards.append(reward)
-            state = self.preprocess_image(self.env.getScreenGrayscale())
+            state = self.preprocess_image(obs)
             self.frame_stacker.append(state)
             if steps > self.agent.frame_stack:
                 psi_next_state = self.get_recent_states()
-                self.memory.push(psi_state, action, psi_next_state, reward, self.env.game_over())
+                self.memory.push(psi_state, action, psi_next_state, reward, done)
             self.total_steps += 1
             steps += 1
-            if len(self.memory) <= self.num_samples_pre:   # if there's not enough samples in the memory, then don't backprop
+            if len(self.memory) <= self.num_samples_pre:    # if there's not enough samples in the memory, don't backprop
                 continue
-            self.set_eps()  # decrease exploration
+            self.set_eps()                                  # decrease exploration
             trans_batch = self.memory.sample(self.batch_size)
             loss = self.loss(trans_batch)
-
             # optimize
             self.optimizer.zero_grad()
             loss.backward()
@@ -211,7 +212,6 @@ class Trainer(Runner):
             if self.total_steps % self.reset_target == 0:   # sync up the target to our current q network
                 print("Updating Target")
                 self.agent.update_target()
-
             # prints and logs
             self.tb_writer.add_scalar('DQN_Flappy/loss', float(loss), self.total_steps)
             self.tb_writer.add_scalar('DQN_Flappy/reward_per_ep', np.mean(self.reward_per_ep), self.total_steps)
@@ -227,7 +227,7 @@ class Trainer(Runner):
         self.reward_per_ep.append(np.sum(rewards))
 
     def set_eps(self):
-        """Function to decrease exploration linearly as we increase steps (copying the DeepMind paper)"""
+        """Function to decrease exploration linearly as we increase steps"""
         self.agent.eps = np.max([0.01, (0.01 + 0.99 * (1 - self.total_steps/self.final_exp_frame))])
 
     def run_experiment(self, num_episodes=1000):
@@ -247,13 +247,14 @@ class Trainer(Runner):
 
 class Tester(Runner):
 
-    def __init__(self, env, agent, downscale):
-        super(Tester, self).__init__(env, agent, downscale)
+    def __init__(self, env, agent, downscale, frame_skip):
+        super(Tester, self).__init__(env, agent, downscale, frame_skip)
 
     def load_model(self, path):
         params = torch.load(path, map_location={'cuda:0': 'cpu'})
         self.agent.q_network.load_state_dict(params)
 
+    # TODO: NEEDS REJIGGING
     def episode(self):
         steps = 0
         # Do resets
