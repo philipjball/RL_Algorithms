@@ -1,15 +1,15 @@
 import gym
 from gym.wrappers import Monitor
 import gym_ple
-from DQNAgent import *
+from src.DQNAgent import *
 import argparse
 import os
 
 
-class FlappyRewardWrapper(gym.RewardWrapper):
+class RewardClipWrapper(gym.RewardWrapper):
 
     def __init__(self, env, living=False):
-        super(FlappyRewardWrapper, self).__init__(env)
+        super(RewardClipWrapper, self).__init__(env)
         self.living = living
 
     def reward(self, reward):
@@ -30,7 +30,7 @@ def setup_env_agent(env, monitor, reward_shaping, frame_stack, train):
         reward_shaping = True
     else:
         reward_shaping = False
-    env = FlappyRewardWrapper(env, reward_shaping)
+    env = RewardClipWrapper(env, reward_shaping)
     if len(env.observation_space.shape) == 1:   # if we have rank of 1, it's a 1D space, so no need for convolutions
         conv = False
         input_dim = int(env.observation_space.shape[0])
@@ -69,17 +69,17 @@ def main(args):
         env, flappy_agent = setup_env_agent(env=args.env, monitor=args.monitor, reward_shaping=False,
                                             frame_stack=args.frame_stack, train=False)
         flappy_agent.eps = 0.0
-        flappy_runner = Tester(env, flappy_agent, 84, max_ep_steps=args.max_ep_steps, frame_skip=args.frame_skip)
+        flappy_runner = Tester(env, flappy_agent, 84, max_ep_steps=args.max_ep_steps, frame_skip=args.frame_skip,
+                               visualise=args.visualise)
         flappy_runner.load_model(args.testfile)
 
-    env.render()
     flappy_runner.run_experiment(args.num_episodes)
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Run DQN on Flappy Bird, training/testing.')
-    parser.add_argument('--env' ,type=check_env, default='FlappyBird-v0',
+    parser.add_argument('--env', type=check_env, default='FlappyBird-v0',
                         help='set to required environment')
     parser.add_argument('--mode', type=check_train_test, default='test',
                         help='set to train or test')
@@ -111,6 +111,8 @@ if __name__ == '__main__':
                         help='how many episodes to run')
     parser.add_argument('--num_samples_pre', type=int, default=3000,
                         help='num of samples with a random policy to seed the replay memory buffer')
+    parser.add_argument('--visualise', type=bool, default=False,
+                        help='Visualise trained agent')
     arguments = parser.parse_args()
 
     main(arguments)

@@ -194,6 +194,7 @@ class Trainer(Runner):
         self.loss = DQNLoss(self.agent.q_network, self.agent.q_target, self.agent.action_set, gamma=gamma)
         self.save_freq = save_freq
         self.num_samples_pre=num_samples_pre
+        self.episode_cnt = 0
 
     def episode(self):
         steps = 0
@@ -205,7 +206,6 @@ class Trainer(Runner):
         self.frame_stacker.append(state)                        # Append the first state into the stacker
         # Start training episode
         while done is False and steps < self.max_ep_steps:
-            self.env.render()
             if steps < self.agent.frame_stack:                  # Need to fill frame stacker
                 action = 0
             else:
@@ -236,12 +236,13 @@ class Trainer(Runner):
             loss.backward()
             self.optimizer.step()
             if self.total_steps % self.reset_target == 0:   # sync up the target to our current q network
-                print("Updating Target")
+                # print("Updating Target")
                 self.agent.update_target()
             # prints and logs
             self.tb_writer.add_scalar('DQN_' + self.env.spec.id + '/loss', float(loss), self.total_steps)
             self.tb_writer.add_scalar('DQN_' + self.env.spec.id + '/reward_per_ep', np.mean(self.reward_per_ep), self.total_steps)
             self.tb_writer.add_scalar('DQN_' + self.env.spec.id + '/epsilon', self.agent.eps, self.total_steps)
+            self.tb_writer.add_scalar('DQN_' + self.env.spec.id + '/cum_episodes', self.episode_cnt, self.total_steps)
             if self.total_steps % 1000 == 0:
                 print('Loss at %d steps is %.5f' % (self.total_steps, float(loss)))
                 print('Mean reward per episode is:', np.mean(self.reward_per_ep))
@@ -251,15 +252,19 @@ class Trainer(Runner):
                 self.save_model()
 
         self.reward_per_ep.append(np.sum(rewards))
+        if len(self.memory) > self.num_samples_pre:
+            self.episode_cnt += 1
 
     def set_eps(self):
         """Function to decrease exploration linearly as we increase steps"""
-        self.agent.eps = np.max([0.01, (0.01 + 0.99 * (1 - self.total_steps/self.final_exp_frame))])
+        self.agent.eps = np.max([0.01, (0.01 + 0.99 * (1 - (self.total_steps - self.num_samples_pre)
+                                                       / self.final_exp_frame))])
 
     def run_experiment(self, num_episodes=1000):
         print('Beginning Training...')
         for i in range(num_episodes):
             self.episode()
+        self.env.close()
 
     def save_model(self):
         now = datetime.datetime.now()
@@ -268,13 +273,15 @@ class Trainer(Runner):
         print('Saving Model at %d steps...' % self.total_steps)
         if not os.path.exists('./models'):
             os.makedirs('./models')
-        torch.save(self.agent.q_network.state_dict(), './models/params_dqn_' + self.env.spec.id + '_' + now_str + steps_str + '.pth')
+        torch.save(self.agent.q_network.state_dict(), './models/params_dqn_' + self.env.spec.id + '_' + now_str +
+                   steps_str + '.pth')
 
 
 class Tester(Runner):
 
-    def __init__(self, env, agent, downscale, max_ep_steps, frame_skip):
+    def __init__(self, env, agent, downscale, max_ep_steps, frame_skip, visualise):
         super(Tester, self).__init__(env, agent, downscale, max_ep_steps, frame_skip)
+        self.visualise = visualise
 
     def load_model(self, path):
         params = torch.load(path, map_location={'cuda:0': 'cpu'})
@@ -290,6 +297,8 @@ class Tester(Runner):
         self.frame_stacker.append(state)
         while done is False and steps < self.max_ep_steps:
             # Need to fill frame stacker
+            if self.visualise:
+                self.env.render()
             if steps < self.agent.frame_stack:
                 action = 0
             else:
@@ -314,4 +323,5 @@ class Tester(Runner):
         print('Beginning Testing...')
         for i in range(num_episodes):
             reward_list.append(self.episode())
+        self.env.close()
         print('Average reward over %d episodes is: %.1f' % (num_episodes, np.mean(reward_list)))
