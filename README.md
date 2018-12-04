@@ -12,6 +12,7 @@ In its current version, I get the following performance averaged over 20 episode
 | Algorithm | Game |Performance |
 | :----:       | :---: |:----:         |
 | DQN Vanilla  | FlapPy Bird| 66.5   |
+| DQN Vanilla   | CartPole-v0 | 193.8 |
 
 ## Algorithms Implmented
 - [x] [Vanilla DQN](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
@@ -34,10 +35,11 @@ In its current version, I get the following performance averaged over 20 episode
 * TensorboardX 1.4
 * PyGame 1.9.4
 * [PyGame Learning Environment](https://github.com/ntasfi/PyGame-Learning-Environment) 0.0.1
+* OpenAI Gym 0.10.5
 
 ## Usage
 
-To visualise the agent with pre-trained weights, simply type:
+To visualise the agent on FlappyBird with pre-trained weights, simply type:
 ```bash
 python runFlappy.py
 ```
@@ -46,10 +48,10 @@ The various options are as follows:
 python runExp.py
 
 ## High Level Settings
---exp FlappyBird-v0                         # one of CartPole-v0 or FlappyBird-v0
+--exp FlappyBird-v0                         # one of 'CartPole-v0' or 'FlappyBird-v0'
 --mode 'test'                               # one of 'train' or 'test'
---testfile './params/trained_params.pth'    # location of pretrained model (if 'test' is selected)
---slow False                                # run at native 30 FPS (seems less stable)
+--testfile './params/trained_params_gym_fb.pth'    # location of pretrained model (if 'test' is selected)
+--visualise False                           # visualise the trained agent
 
 ## Training Settings
 --frame_skip 3                              # how many frames will be skipped and the same action will be applied
@@ -67,6 +69,9 @@ python runExp.py
 ```
 
 ## TODO:
+* Document the helper functions:
+    * viewAgent.py
+    * trainReplicate.py
 * Add more
     * Games (Pong, OpenAI Gym)
     * [Algorithms](https://spinningup.openai.com/en/latest/spinningup/spinningup.html#learn-by-doing)
