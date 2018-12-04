@@ -19,9 +19,9 @@ class FlappyRewardWrapper(gym.RewardWrapper):
         return reward
 
 
-def setup_env_agent(monitor, reward_shaping, frame_stack, train):
+def setup_env_agent(env, monitor, reward_shaping, frame_stack, train):
 
-    env = gym.make('FlappyBird-v0')
+    env = gym.make(env)
     if monitor:
         if not os.path.exists('./models'):
             os.makedirs('./monitor_dir')
@@ -31,8 +31,14 @@ def setup_env_agent(monitor, reward_shaping, frame_stack, train):
     else:
         reward_shaping = False
     env = FlappyRewardWrapper(env, reward_shaping)
+    if len(env.observation_space.shape) == 1:   # if we have rank of 1, it's a 1D space, so no need for convolutions
+        conv = False
+        input_dim = int(env.observation_space.shape[0])
+    else:
+        conv = True         # otherwise it's an image, so we'll have to add these
+        input_dim = 84
     env.seed(0)
-    agent = DQNAgent(env.action_space, frame_stack=frame_stack)
+    agent = DQNAgent(env.action_space, frame_stack=frame_stack, conv=conv, input_dim=input_dim)
     return env, agent
 
 
@@ -43,10 +49,16 @@ def check_train_test(value):
         raise argparse.ArgumentTypeError("%s is not 'train' or 'test'" % value)
 
 
+def check_env(value):
+    if value in ['FlappyBird-v0', 'CartPole-v0']:
+        return value
+    else:
+        raise argparse.ArgumentTypeError("%s is not a gym environment" % value)
+
 def main(args):
 
     if args.mode == 'train':
-        env, flappy_agent = setup_env_agent(monitor=args.monitor, reward_shaping=args.reward_shaping,
+        env, flappy_agent = setup_env_agent(env=args.env, monitor=args.monitor, reward_shaping=args.reward_shaping,
                                             frame_stack=args.frame_stack, train=True)
         flappy_runner = Trainer(env, flappy_agent, ReplayMemory, batch_size=args.batch_size,
                                 memory_size=args.memory_size, final_exp_frame=args.final_exp_frame,
@@ -54,18 +66,21 @@ def main(args):
                                 max_ep_steps=args.max_ep_steps, gamma=args.gamma,
                                 num_samples_pre=args.num_samples_pre, frame_skip=args.frame_skip)
     else:
-        env, flappy_agent = setup_env_agent(monitor=args.monitor, reward_shaping=False,
+        env, flappy_agent = setup_env_agent(env=args.env, monitor=args.monitor, reward_shaping=False,
                                             frame_stack=args.frame_stack, train=False)
         flappy_agent.eps = 0.0
         flappy_runner = Tester(env, flappy_agent, 84, max_ep_steps=args.max_ep_steps, frame_skip=args.frame_skip)
         flappy_runner.load_model(args.testfile)
 
+    env.render()
     flappy_runner.run_experiment(args.num_episodes)
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Run DQN on Flappy Bird, training/testing.')
+    parser.add_argument('--env' ,type=check_env, default='FlappyBird-v0',
+                        help='set to required environment')
     parser.add_argument('--mode', type=check_train_test, default='test',
                         help='set to train or test')
     parser.add_argument('--testfile', type=str, default='./models/trained_params_gym_fb.pth',

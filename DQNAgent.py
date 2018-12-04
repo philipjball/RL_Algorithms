@@ -37,19 +37,37 @@ class ReplayMemory(object):
         return len(self.memory)
 
 
-class DQN(nn.Module):
+class DQNDense(nn.Module):
 
-    def __init__(self, action_set, frame_stack=4, input_height=84, input_width=84):
-        super(DQN, self).__init__()
+    def __init__(self, action_set, frame_stack=1, input_dim=4):
+        super(DQNDense, self).__init__()
+        assert frame_stack == 1, "there can only be one frame in dense network experiments (i.e., non-image-based)"
+        num_actions = action_set.n
+        self.relu = nn.ReLU()
+        self.linear1 = nn.Linear(input_dim, 256)
+        self.linear2 = nn.Linear(256, 256)
+        self.linear3 = nn.Linear(256, num_actions)
+
+    def forward(self, x):
+        x = self.relu(self.linear1(x))
+        x = self.relu(self.linear2(x))
+        return self.linear3(x)
+
+
+class DQNConv(nn.Module):
+
+    def __init__(self, action_set, frame_stack=4, input_dim=84):
+        super(DQNConv, self).__init__()
         num_actions = action_set.n
         self.conv1 = nn.Conv2d(frame_stack, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-        self.linear1 = nn.Linear(self.calculate_final_size(input_height, input_width), 512)
+        self.linear1 = nn.Linear(self.calculate_final_size(input_dim, input_dim), 512)
         self.linear2 = nn.Linear(512, num_actions)
         self.relu = nn.ReLU()
 
     def forward(self, x):
+        x = x / 255.                  # normalise the input to [0,1]
         x = self.relu(self.conv1(x))
         x = self.relu(self.conv2(x))
         x = self.relu(self.conv3(x))
@@ -75,12 +93,15 @@ class DQN(nn.Module):
 
 class DQNAgent(object):
 
-    def __init__(self, action_set, frame_stack=4, input_height=84, input_width=84):
+    def __init__(self, action_set, frame_stack=4, input_dim=84, conv=True):
         self.frame_stack = frame_stack
-        self.q_network = DQN(action_set, frame_stack=frame_stack, input_height=input_height,
-                             input_width=input_width).to(device)
-        self.q_target = DQN(action_set, frame_stack=frame_stack, input_height=input_height,
-                            input_width=input_width).to(device)
+        self.conv = conv
+        if self.conv:
+            dqn = DQNConv
+        else:
+            dqn = DQNDense
+        self.q_network = dqn(action_set=action_set, frame_stack=frame_stack, input_dim=input_dim).to(device)
+        self.q_target = dqn(action_set=action_set, frame_stack=frame_stack, input_dim=input_dim).to(device)
         self.eps = 1.0
         self.action_set = action_set
 
@@ -109,9 +130,9 @@ class DQNLoss(nn.Module):
         self.loss = nn.SmoothL1Loss()
 
     def forward(self, transition_in):
-        states = torch.tensor(np.stack(transition_in.state), dtype=torch.float, device=device) / 255
+        states = torch.tensor(np.stack(transition_in.state), dtype=torch.float, device=device).squeeze()
         actions_index = torch.tensor(transition_in.action, dtype=torch.long, device=device)
-        next_states = torch.tensor(np.stack(transition_in.next_state), dtype=torch.float, device=device) / 255
+        next_states = torch.tensor(np.stack(transition_in.next_state), dtype=torch.float, device=device).squeeze()
         rewards = torch.tensor(transition_in.reward, dtype=torch.float, device=device)
         done = torch.tensor(transition_in.done, dtype=torch.float, device=device)
         pred_return_all = self.q_network(states)
@@ -134,13 +155,15 @@ class Runner(object):
 
     def preprocess_image(self, input_image):
         """Does a few things:
+        0. Checks if it is an image
         1. Convert to GrayScale
         2. Reshape image to 84x84
         3. Convert to a uint8 numpy array
         """
-        input_image = Image.fromarray(input_image)
-        input_image = self.transformer(input_image)
-        input_image = np.array(input_image, dtype=np.uint8)
+        if self.agent.conv:
+            input_image = Image.fromarray(input_image)
+            input_image = self.transformer(input_image)
+            input_image = np.array(input_image, dtype=np.uint8)
         return input_image
 
     def episode(self):
@@ -182,16 +205,19 @@ class Trainer(Runner):
         self.frame_stacker.append(state)                        # Append the first state into the stacker
         # Start training episode
         while done is False and steps < self.max_ep_steps:
+            self.env.render()
             if steps < self.agent.frame_stack:                  # Need to fill frame stacker
                 action = 0
             else:
                 psi_state = self.get_recent_states()
-                psi_state_tensor = torch.tensor(psi_state, dtype=torch.float, device=device).unsqueeze(0) / 255
+                psi_state_tensor = torch.tensor(psi_state, dtype=torch.float, device=device).unsqueeze(0)
                 action = self.agent.get_action(psi_state_tensor)
             reward = 0  # zero the reward for frame skipping
             for i in range(self.frame_skip):
-                obs, r, done, _ = self.env.step(action)     # NB: Even if the environment is 'done', it will still accept actions and continue returning 'done'
+                obs, r, done, _ = self.env.step(action)
                 reward += r
+                if done:
+                    break
             rewards.append(reward)
             state = self.preprocess_image(obs)
             self.frame_stacker.append(state)
@@ -213,9 +239,9 @@ class Trainer(Runner):
                 print("Updating Target")
                 self.agent.update_target()
             # prints and logs
-            self.tb_writer.add_scalar('DQN_Flappy/loss', float(loss), self.total_steps)
-            self.tb_writer.add_scalar('DQN_Flappy/reward_per_ep', np.mean(self.reward_per_ep), self.total_steps)
-            self.tb_writer.add_scalar('DQN_Flappy/epsilon', self.agent.eps, self.total_steps)
+            self.tb_writer.add_scalar('DQN_' + self.env.spec.id + '/loss', float(loss), self.total_steps)
+            self.tb_writer.add_scalar('DQN_' + self.env.spec.id + '/reward_per_ep', np.mean(self.reward_per_ep), self.total_steps)
+            self.tb_writer.add_scalar('DQN_' + self.env.spec.id + '/epsilon', self.agent.eps, self.total_steps)
             if self.total_steps % 1000 == 0:
                 print('Loss at %d steps is %.5f' % (self.total_steps, float(loss)))
                 print('Mean reward per episode is:', np.mean(self.reward_per_ep))
@@ -242,7 +268,7 @@ class Trainer(Runner):
         print('Saving Model at %d steps...' % self.total_steps)
         if not os.path.exists('./models'):
             os.makedirs('./models')
-        torch.save(self.agent.q_network.state_dict(), './models/params_dqn_' + now_str + steps_str + '.pth')
+        torch.save(self.agent.q_network.state_dict(), './models/params_dqn_' + self.env.spec.id + '_' + now_str + steps_str + '.pth')
 
 
 class Tester(Runner):
@@ -268,7 +294,7 @@ class Tester(Runner):
                 action = 0
             else:
                 psi_state = self.get_recent_states()
-                psi_state_tensor = torch.tensor(psi_state, dtype=torch.float, device=device).unsqueeze(0) / 255
+                psi_state_tensor = torch.tensor(psi_state, dtype=torch.float, device=device).unsqueeze(0)
                 action = self.agent.get_action(psi_state_tensor)
             reward = 0  # zero the reward for frame skipping
             for i in range(self.frame_skip):
