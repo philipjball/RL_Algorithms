@@ -67,9 +67,10 @@ python runFlappy.py
 
 ## TODO:
 * Make the model [OpenAI Gym friendly](https://github.com/lusob/gym-ple)
-    * Manual Frame-Skipping in the runners
-    * Check rewards
-    * Convert RGB to GrayScale in the preprocessors
+    * ~~Manual Frame-Skipping in the runners~~
+    * ~~Check rewards~~
+    * ~~Convert RGB to GrayScale in the preprocessors~~
+    * Check it trains similarly
 * Add more
     * Games (Pong, OpenAI Gym)
     * [Algorithms](https://spinningup.openai.com/en/latest/spinningup/spinningup.html#learn-by-doing)

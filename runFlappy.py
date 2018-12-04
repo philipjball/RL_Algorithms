@@ -57,10 +57,9 @@ def main(args):
         env, flappy_agent = setup_env_agent(monitor=args.monitor, reward_shaping=False,
                                             frame_stack=args.frame_stack, train=False)
         flappy_agent.eps = 0.0
-        flappy_runner = Tester(env, flappy_agent, 84, frame_skip=args.frame_skip)
+        flappy_runner = Tester(env, flappy_agent, 84, max_ep_steps=args.max_ep_steps, frame_skip=args.frame_skip)
         flappy_runner.load_model(args.testfile)
 
-    print(args.num_episodes)
     flappy_runner.run_experiment(args.num_episodes)
 
 
@@ -69,7 +68,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run DQN on Flappy Bird, training/testing.')
     parser.add_argument('--mode', type=check_train_test, default='train',
                         help='set to train or test')
-    parser.add_argument('--testfile', type=str, default='./models/trained_params.pth',
+    parser.add_argument('--testfile', type=str, default='./models/trained_params_gym_fb.pth',
                         help='path of the trained model')
     parser.add_argument('--monitor', type=bool, default=False,
                         help='monitor the training/testing')

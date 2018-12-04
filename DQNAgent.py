@@ -247,40 +247,45 @@ class Trainer(Runner):
 
 class Tester(Runner):
 
-    def __init__(self, env, agent, downscale, frame_skip):
-        super(Tester, self).__init__(env, agent, downscale, frame_skip)
+    def __init__(self, env, agent, downscale, max_ep_steps, frame_skip):
+        super(Tester, self).__init__(env, agent, downscale, max_ep_steps, frame_skip)
 
     def load_model(self, path):
         params = torch.load(path, map_location={'cuda:0': 'cpu'})
         self.agent.q_network.load_state_dict(params)
 
-    # TODO: NEEDS REJIGGING
     def episode(self):
         steps = 0
+        done = False
         # Do resets
-        self.env.reset_game()
+        state = self.preprocess_image(self.env.reset())
         self.frame_stacker.clear()
         rewards = []
-        # Start testing
-        state = self.preprocess_image(self.env.getScreenGrayscale())
         self.frame_stacker.append(state)
-        while self.env.game_over() is False and steps < self.max_ep_steps:
+        while done is False and steps < self.max_ep_steps:
             # Need to fill frame stacker
             if steps < self.agent.frame_stack:
-                action = None
+                action = 0
             else:
                 psi_state = self.get_recent_states()
                 psi_state_tensor = torch.tensor(psi_state, dtype=torch.float, device=device).unsqueeze(0) / 255
                 action = self.agent.get_action(psi_state_tensor)
-            reward = self.env.act(action)
+            reward = 0  # zero the reward for frame skipping
+            for i in range(self.frame_skip):
+                obs, r, done, _ = self.env.step(action)     # NB: Even if the environment is 'done', it will still accept actions and continue returning 'done'
+                reward += r
             rewards.append(reward)
-            state = self.preprocess_image(self.env.getScreenGrayscale())
+            state = self.preprocess_image(obs)
             self.frame_stacker.append(state)
             self.total_steps += 1
             steps += 1
-        print('This episode had %.2f reward' % (np.sum(rewards)))
+        total_reward = np.sum(rewards)
+        print('This episode had %.2f reward' % total_reward)
+        return total_reward
 
     def run_experiment(self, num_episodes=1000):
+        reward_list = []
         print('Beginning Testing...')
         for i in range(num_episodes):
-            self.episode()
+            reward_list.append(self.episode())
+        print('Average reward over %d episodes is: %.1f' % (num_episodes, np.mean(reward_list)))
