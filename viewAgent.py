@@ -14,14 +14,14 @@ def main(args):
         if args.testfile:
             testfile = args.testfile
         else:
-            testfile = './models/trained_params_gym_cp.pth'
+            testfile = './params/trained_params_gym_cp.pth'
         os.system('python runExp.py --env CartPole-v0 --frame_stack 1 --visualise True --testfile ' + testfile +
                   ' --num_episodes ' + str(args.num_episodes))
     elif args.env == 'FlappyBird-v0':
         if args.testfile:
             testfile = args.testfile
         else:
-            testfile = './models/trained_params_gym_fb.pth'
+            testfile = './params/trained_params_gym_fb.pth'
         os.system('python runExp.py --testfile ' + testfile)
 
 

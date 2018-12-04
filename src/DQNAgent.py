@@ -271,9 +271,9 @@ class Trainer(Runner):
         now_str = now.strftime("%Y-%m-%d-%H-%M")
         steps_str = '_%dsteps' % self.total_steps
         print('Saving Model at %d steps...' % self.total_steps)
-        if not os.path.exists('./models'):
-            os.makedirs('./models')
-        torch.save(self.agent.q_network.state_dict(), './models/params_dqn_' + self.env.spec.id + '_' + now_str +
+        if not os.path.exists('./params'):
+            os.makedirs('./params')
+        torch.save(self.agent.q_network.state_dict(), './params/params_dqn_' + self.env.spec.id + '_' + now_str +
                    steps_str + '.pth')
 
 

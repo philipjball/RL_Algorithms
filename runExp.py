@@ -23,7 +23,7 @@ def setup_env_agent(env, monitor, reward_shaping, frame_stack, train):
 
     env = gym.make(env)
     if monitor:
-        if not os.path.exists('./models'):
+        if not os.path.exists('./monitor_dir'):
             os.makedirs('./monitor_dir')
         env = Monitor(env, './monitor_dir/', force=True)
     if reward_shaping and train:    # only shape reward when training and when stipulated
@@ -83,7 +83,7 @@ if __name__ == '__main__':
                         help='set to required environment')
     parser.add_argument('--mode', type=check_train_test, default='test',
                         help='set to train or test')
-    parser.add_argument('--testfile', type=str, default='./models/trained_params_gym_fb.pth',
+    parser.add_argument('--testfile', type=str, default='./params/trained_params_gym_fb.pth',
                         help='path of the trained model')
     parser.add_argument('--monitor', type=bool, default=False,
                         help='monitor the training/testing')

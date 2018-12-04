@@ -2,5 +2,5 @@
 notebooks/
 monitor_dir/
 runs/
-models/
+params/
 __pycache__/

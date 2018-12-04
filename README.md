@@ -48,7 +48,7 @@ python runExp.py
 ## High Level Settings
 --exp FlappyBird-v0                         # one of CartPole-v0 or FlappyBird-v0
 --mode 'test'                               # one of 'train' or 'test'
---testfile './models/trained_params.pth'    # location of pretrained model (if 'test' is selected)
+--testfile './params/trained_params.pth'    # location of pretrained model (if 'test' is selected)
 --slow False                                # run at native 30 FPS (seems less stable)
 
 ## Training Settings
