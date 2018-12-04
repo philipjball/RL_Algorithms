@@ -11,7 +11,7 @@ In its current version, I get the following performance averaged over 20 episode
 
 | Algorithm | Game |Performance |
 | :----:       | :---: |:----:         |
-| DQN Vanilla  | FlapPy Bird| 119.1   |
+| DQN Vanilla  | FlapPy Bird| 66.5   |
 
 ## Algorithms Implmented
 - [x] [Vanilla DQN](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
@@ -66,11 +66,6 @@ python runFlappy.py
 ```
 
 ## TODO:
-* Make the model [OpenAI Gym friendly](https://github.com/lusob/gym-ple)
-    * ~~Manual Frame-Skipping in the runners~~
-    * ~~Check rewards~~
-    * ~~Convert RGB to GrayScale in the preprocessors~~
-    * Check it trains similarly
 * Add more
     * Games (Pong, OpenAI Gym)
     * [Algorithms](https://spinningup.openai.com/en/latest/spinningup/spinningup.html#learn-by-doing)

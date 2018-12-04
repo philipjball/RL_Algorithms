@@ -66,7 +66,7 @@ def main(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Run DQN on Flappy Bird, training/testing.')
-    parser.add_argument('--mode', type=check_train_test, default='train',
+    parser.add_argument('--mode', type=check_train_test, default='test',
                         help='set to train or test')
     parser.add_argument('--testfile', type=str, default='./models/trained_params_gym_fb.pth',
                         help='path of the trained model')
