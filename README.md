@@ -10,8 +10,8 @@ Inspired by [Spinning Up](https://spinningup.openai.com/en/latest/), we will imp
 In its current version, I get the following performance:
 
 | Algorithm | Game |Performance | Episodes  |
-| :----:       | :---: |:----:         |    |
-| DQN Vanilla  | FlapPy Bird| 66.5   |   20 |
+| :----:       | :---: |:----:         |  :---: |
+| DQN Vanilla  | FlapPy Bird | 66.5   |   20 |
 | DQN Vanilla   | CartPole-v0 | 200.0 | 100 |
 
 ## Algorithms Implmented
