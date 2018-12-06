@@ -39,14 +39,14 @@ class ReplayMemory(object):
 
 class DQNDense(nn.Module):
 
-    def __init__(self, action_set, frame_stack=1, input_dim=4):
+    def __init__(self, action_set, frame_stack=1, input_dim=4, n_hiddens=256):
         super(DQNDense, self).__init__()
         assert frame_stack == 1, "there can only be one frame in dense network experiments (i.e., non-image-based)"
         num_actions = action_set.n
         self.relu = nn.ReLU()
-        self.linear1 = nn.Linear(input_dim, 256)
-        self.linear2 = nn.Linear(256, 256)
-        self.linear3 = nn.Linear(256, num_actions)
+        self.linear1 = nn.Linear(input_dim, n_hiddens)
+        self.linear2 = nn.Linear(n_hiddens, n_hiddens)
+        self.linear3 = nn.Linear(n_hiddens, num_actions)
 
     def forward(self, x):
         x = self.relu(self.linear1(x))
@@ -182,10 +182,14 @@ class Runner(object):
 class Trainer(Runner):
     def __init__(self, env, agent, memory_func, batch_size=32, downscale=84, frame_skip=3, num_samples_pre=30000,
                  memory_size=50000, max_ep_steps=1000000, reset_target=10000, final_exp_frame=100000, gamma=0.9,
-                 optimizer=optim.Adam, save_freq=100000):
+                 optimizer=optim.Adam, save_freq=100000, weight_decay=1e-4, lr_scheduler=None):
         super(Trainer, self).__init__(env, agent, downscale, max_ep_steps, frame_skip)
         self.memory = memory_func(memory_size)
-        self.optimizer = optimizer(self.agent.q_network.parameters(), lr=1e-4)
+        self.optimizer = optimizer(self.agent.q_network.parameters(), lr=1e-4, weight_decay=weight_decay)
+        if lr_scheduler:
+            self.scheduler = optim.lr_scheduler.MultiStepLR(self.optimizer, lr_scheduler, gamma = 0.1)
+        else:
+            self.scheduler = None
         self.batch_size = batch_size
         self.reset_target = reset_target
         self.final_exp_frame = final_exp_frame  # Final frame for exploration (whereby we go to eps = 0.01 henceforth)
@@ -235,6 +239,8 @@ class Trainer(Runner):
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            if self.scheduler:
+                self.scheduler.step()
             if self.total_steps % self.reset_target == 0:   # sync up the target to our current q network
                 # print("Updating Target")
                 self.agent.update_target()
@@ -262,7 +268,7 @@ class Trainer(Runner):
 
     def run_experiment(self, num_episodes=1000):
         print('Beginning Training...')
-        for i in range(num_episodes):
+        for _ in range(num_episodes):
             self.episode()
         self.env.close()
 
@@ -321,7 +327,7 @@ class Tester(Runner):
     def run_experiment(self, num_episodes=1000):
         reward_list = []
         print('Beginning Testing...')
-        for i in range(num_episodes):
+        for _ in range(num_episodes):
             reward_list.append(self.episode())
         self.env.close()
         print('Average reward over %d episodes is: %.1f' % (num_episodes, np.mean(reward_list)))

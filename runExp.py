@@ -1,9 +1,10 @@
+import argparse
+import os
 import gym
 from gym.wrappers import Monitor
 import gym_ple
+from utils.helpers import *
 from src.DQNAgent import *
-import argparse
-import os
 
 
 class RewardClipWrapper(gym.RewardWrapper):
@@ -41,19 +42,6 @@ def setup_env_agent(env, monitor, reward_shaping, frame_stack, train):
     agent = DQNAgent(env.action_space, frame_stack=frame_stack, conv=conv, input_dim=input_dim)
     return env, agent
 
-
-def check_train_test(value):
-    if value in ['train', 'test']:
-        return value
-    else:
-        raise argparse.ArgumentTypeError("%s is not 'train' or 'test'" % value)
-
-
-def check_env(value):
-    if value in ['FlappyBird-v0', 'CartPole-v0']:
-        return value
-    else:
-        raise argparse.ArgumentTypeError("%s is not a gym environment" % value)
 
 def main(args):
 
@@ -93,6 +81,10 @@ if __name__ == '__main__':
                         help='incorporate a reward for living')
     parser.add_argument('--frame_stack', type=int, default=4,
                         help='how many frames to stack together as input to DQN')
+    parser.add_argument('--weight_decay', type=float, default = 0,
+                        help='add weight-decay into the training')
+    parser.add_argument('--lr_scheduler', type=list, default = None,
+                        help='add a learning rate scheduler (important for cartpole)')
     parser.add_argument('--gamma', type=float, default=0.9,
                         help='future return discounting parameter')
     parser.add_argument('--batch_size', type=int, default=32,
@@ -112,7 +104,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_samples_pre', type=int, default=3000,
                         help='num of samples with a random policy to seed the replay memory buffer')
     parser.add_argument('--visualise', type=bool, default=False,
-                        help='Visualise trained agent')
+                        help='visualise trained agent')
     arguments = parser.parse_args()
+    print(arguments.visualise)
 
     main(arguments)

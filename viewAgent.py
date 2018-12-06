@@ -10,13 +10,13 @@ def check_env(value):
 
 
 def main(args):
-    if args.env == 'CartPole-v0':
+    if 'CartPole-v' in args.env:
         if args.testfile:
             testfile = args.testfile
         else:
-            testfile = './params/trained_params_gym_cp.pth'
-        os.system('python runExp.py --env CartPole-v0 --frame_stack 1 --visualise True --testfile ' + testfile +
-                  ' --num_episodes ' + str(args.num_episodes))
+            testfile = './params/trained_params_gym_cp2.pth'
+        os.system('python runExp.py --env ' + args.env + ' --frame_stack 1 --testfile ' + testfile +
+                  ' --num_episodes ' + str(args.num_episodes) + ' --frame_skip 1')
     elif args.env == 'FlappyBird-v0':
         if args.testfile:
             testfile = args.testfile
@@ -33,5 +33,7 @@ if __name__ == '__main__':
                         help='path for own model')
     parser.add_argument('--num_episodes', type=int, default=20,
                         help='test over this many episodes')
+    parser.add_argument('--visualise', type=bool, default=False,
+                        help='visualise the agent')
     arguments = parser.parse_args()
     main(arguments)

@@ -7,12 +7,12 @@ Inspired by [Spinning Up](https://spinningup.openai.com/en/latest/), we will imp
 | :---: |
 | *DQN Playing Flappy Bird* |
 
-In its current version, I get the following performance averaged over 20 episodes:
+In its current version, I get the following performance:
 
-| Algorithm | Game |Performance |
-| :----:       | :---: |:----:         |
-| DQN Vanilla  | FlapPy Bird| 66.5   |
-| DQN Vanilla   | CartPole-v0 | 193.8 |
+| Algorithm | Game |Performance | Episodes  |
+| :----:       | :---: |:----:         |    |
+| DQN Vanilla  | FlapPy Bird| 66.5   |   20 |
+| DQN Vanilla   | CartPole-v0 | 200.0 | 100 |
 
 ## Algorithms Implmented
 - [x] [Vanilla DQN](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
@@ -66,6 +66,8 @@ python runExp.py
 --save_freq 10000                           # how many steps between saving model parameters
 --num_episodes 100000000                    # how many episodes to run in total (basically infinite)
 --num_samples_pre 3000                      # how many samples under a random policy to initially load into the replay memory
+--weight_decay 0                            # weight decay (L2 regularisation) amount
+--lr_scheduler None                         # takes a list if provided; divides learning rate by 10 for every entry in the list
 ```
 
 ## TODO:
