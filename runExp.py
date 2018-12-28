@@ -5,6 +5,7 @@ from gym.wrappers import Monitor
 import gym_ple
 from utils.helpers import *
 from src.DQNAgent import *
+import vizdoomgym
 
 
 class RewardClipWrapper(gym.RewardWrapper):

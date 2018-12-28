@@ -9,7 +9,7 @@ def check_train_test(value):
 
 
 def check_env(value):
-    if value in ['FlappyBird-v0', 'CartPole-v0', 'CartPole-v1']:
+    if value in ['FlappyBird-v0', 'CartPole-v0', 'CartPole-v1', 'VizdoomBasic-v0']:
         return value
     else:
         raise argparse.ArgumentTypeError("%s is not a gym environment" % value)
