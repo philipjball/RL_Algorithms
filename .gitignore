@@ -4,3 +4,4 @@ monitor_dir/
 runs/
 params/
 __pycache__/
+_vizdoom.ini
